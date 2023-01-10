@@ -3,7 +3,7 @@ import { products,
      purchase } from "./database";
 import express, {Request, Response} from 'express';
 import cors from 'cors';
-import { TProduct, TPurchase, TUser } from "./types";
+import { Category, TProduct, TPurchase, TUser } from "./types";
 
 const app = express();
 
@@ -102,4 +102,100 @@ app.post("/purchase",(req:Request,res:Response)=>{
 
     res.status(201).send("18")
     console.log("Compra realizada com sucesso!")
+})
+
+//Products by ID
+app.get("/products/:id",(req:Request, res:Response)=>{
+
+    const id = req.params.id
+    const result = products.find((product)=> product.id === id);
+        res.status(200).send(result)
+    console.log("Produto encontrado com sucesso!")
+})
+
+//Purchase Users by ID
+app.get("/users/:id/purchase",(req:Request, res:Response)=>{
+
+    const userId = req.params.id;
+    const result = purchase.filter(purchases => purchases.userId === userId)
+        res.status(200).send(result)
+    console.log("Array de compras do usuário:")
+})
+
+app.delete("/users/:id", (req:Request, res:Response) =>{
+    const id = req.params.id
+    //Encontrar índice do item a ser removido
+    const indexToRemove = users.findIndex((user) => user.id === id)
+    //Deletar apenas se encontrar o item:
+    if(indexToRemove >= 0){
+    //Splice para editar diretamente o array users
+    //Primero arg é o índice alvo
+    //Segundo arg serão qnts itens serão removidos a partir do primeiro arg
+    users.splice(indexToRemove,1)
+    }
+    res.status(200).send("User apagado com sucesso!")
+})
+
+app.delete("/products/:id", (req:Request, res:Response) =>{
+    const id = req.params.id
+    //Encontrar índice do item a ser removido
+    const indexToRemove = products.findIndex((product) => product.id === id)
+    //Deletar apenas se encontrar o item:
+    if(indexToRemove >= 0){
+    //Splice para editar diretamente o array users
+    //Primero arg é o índice alvo
+    //Segundo arg serão qnts itens serão removidos a partir do primeiro arg
+    products.splice(indexToRemove,1)
+    }
+    res.status(200).send("Produto apagado com sucesso!")
+})
+
+app.delete("/purchase/:id", (req:Request, res:Response) =>{
+    const userId = req.params.userId
+    //Encontrar índice do item a ser removido
+    const indexToRemove = purchase.findIndex((purchases) => purchases.userId === userId)
+    //Deletar apenas se encontrar o item:
+    if(indexToRemove >= 0){
+    //Splice para editar diretamente o array users
+    //Primero arg é o índice alvo
+    //Segundo arg serão qnts itens serão removidos a partir do primeiro arg
+    purchase.splice(indexToRemove,1)
+    }
+    res.status(200).send("Produto apagado com sucesso!")
+})
+
+app.put("/users/:id", (req:Request, res:Response) =>{
+    const id = req.params.id
+
+    const newEmail = req.body.email as string | undefined
+	const newPassword = req.body.password as string | undefined
+
+    const user = users.find((user) => user.id === id)
+    
+    if(user){
+    //user.email = (newEmail === undefined ? user.email === newEmail)
+    //user.password = (newPassword === undefined ? user.password === newPassword)
+    user.email = newEmail || user.email
+    user.password = newPassword || user.password
+    }
+    res.status(200).send("Cadastro atualizado com sucesso!")
+})
+
+app.put("/products/:id", (req:Request, res:Response) =>{
+    const id = req.params.id
+
+    const newName = req.body.name as string | undefined
+	const newPrice = req.body.price as number | undefined
+    const newCategory = req.body.category as Category | undefined
+
+    const product = products.find((product) => product.id === id)
+    
+    if(product){
+    //user.email = (newName === undefined ? user.email === newName)
+    //user.password = (newPrice === undefined ? user.password === newPrice)
+    product.name = newName || product.name
+    product.price = newPrice || product.price
+    product.category = newCategory || product.category
+    }
+    res.status(200).send("Produto atualizado com sucesso!")
 })
