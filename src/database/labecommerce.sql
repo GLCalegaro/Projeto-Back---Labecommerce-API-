@@ -77,3 +77,38 @@ SELECT * FROM products
 WHERE price <= 100 AND price <= 300
 ORDER BY price ASC;
 
+CREATE TABLE purchases (
+	id TEXT PRIMARY KEY UNIQUE NOT NULL,
+	total_price REAL NOT NULL,
+	paid INTEGER NOT NULL,
+    delivered_at TEXT NULL,
+	buyer_id TEXT NOT NULL,
+	FOREIGN KEY (buyer_id) REFERENCES users(id)
+);
+
+DROP TABLE purchases;
+
+SELECT * FROM purchases;
+
+INSERT INTO purchases (id, total_price, paid, delivered_at, buyer_id)
+VALUES
+("Purch1", 58.40, 0, NULL, "1"),
+("Purch2", 144.47, 0, NULL, "2");
+INSERT INTO purchases (id, total_price, paid, delivered_at, buyer_id)
+VALUES
+("Purch3", 178.50, 0, NULL, "3");
+INSERT INTO purchases (id, total_price, paid, delivered_at, buyer_id)
+VALUES
+("Purch4", 389.90, 0, NULL, "1");
+
+SELECT * FROM users --TABELA users
+INNER JOIN purchases --TABELA purchases
+ON purchases.buyer_id = users.id;
+
+UPDATE purchases
+SET
+	delivered_at = datetime('now','localtime')
+	WHERE buyer_id = "1"; 
+
+SELECT * from purchases
+WHERE buyer_id = "3";
