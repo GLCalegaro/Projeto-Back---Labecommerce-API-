@@ -112,3 +112,38 @@ SET
 
 SELECT * from purchases
 WHERE buyer_id = "3";
+
+CREATE TABLE purchases_products (
+	purchase_id TEXT NOT NULL,
+	product_id TEXT NOT NULL,
+	quantity INTEGER NOT NULL,
+	create_at TEXT DEFAULT(DATETIME('now', 'localtime')) NOT NULL,
+	FOREIGN KEY (purchase_id) REFERENCES purchases(id)
+	FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+SELECT * FROM purchases_products;
+
+DROP TABLE purchases_products;
+
+INSERT INTO purchases_products(purchase_id, product_id, quantity)
+VALUES ("Purch1", "A1", 2),
+        ("Purch2", "B2", 3),
+        ("Purch3", "D4", 1);
+
+SELECT	-- removendo ambiguidade e aplicando camelCase com ALIAS
+    pu.id AS purchaseId,
+    pu.total_price AS totalPrice,
+    pu.paid,
+	pu.delivered_at AS deliverDate,
+	pu.buyer_id AS buyerID,
+	pr.id AS prID,
+	pr.name AS prName,
+	pr.price
+FROM purchases pu
+left JOIN purchases_products pp
+ON pp.purchase_id = pu.id
+inner JOIN products pr
+ON pp.product_id = pr.id
+
+

@@ -4,6 +4,7 @@ import { products,
 import express, {Request, Response} from 'express';
 import cors from 'cors';
 import { Category, TProduct, TPurchase, TUser } from "./types";
+import { db } from './database/knex';
 
 const app = express();
 
@@ -19,221 +20,295 @@ app.get("/ping",(req:Request,res:Response)=>{
 })
 
 // Pegar Usuarios
-app.get("/users", (req:Request, res:Response)=>{
+app.get("/users", async (req:Request, res:Response)=>{
     try{
-        res.status(200).send(users);//res.statusCode = 400
-    }catch (error:any){
+        const result = await db.raw(`
+                SELECT * FROM users;        
+         `)
+        res.status(200).send({"Array de Users do arquivo labecommerce.db": result});
+    }catch (error){
         console.log(error);
 
         if(res.statusCode === 200){
             res.status(500)
         }
-        res.send(error.message)
+        if (error instanceof Error) {
+            res.send(error.message)
+        } else {
+            res.send("Erro inesperado")
+        }
     }
-});
+})
 
 // //Pegar Produtos
-app.get("/products", (req:Request, res:Response)=>{
+app.get("/products", async(req:Request, res:Response)=>{
     try{
-        res.status(200).send(products);//res.statusCode = 400
-    }catch (error:any){
+        const result = await db.raw(`
+                SELECT * FROM products;        
+         `)
+        res.status(200).send({"Array de Produtos do arquivo labecommerce.db": result});
+    }catch (error){
         console.log(error);
 
         if(res.statusCode === 200){
             res.status(500)
         }
-        res.send(error.message)
+        if (error instanceof Error) {
+            res.send(error.message)
+        } else {
+            res.send("Erro inesperado")
+        }
     }
-});
+})
 
 //Pegar Compras
-app.get("/purchase",(req:Request,res:Response)=>{
+app.get("/purchases", async (req:Request,res:Response)=>{
     try{
-        res.status(200).send(purchase);//res.statusCode = 400
-    }catch (error:any){
+        const result = await db.raw(`
+                SELECT * FROM purchases;        
+         `)
+        res.status(200).send({"Array de Compras do arquivo labecommerce.db": result});
+    }catch (error){
         console.log(error);
 
         if(res.statusCode === 200){
             res.status(500)
         }
-        res.send(error.message)
+        if (error instanceof Error) {
+            res.send(error.message)
+        } else {
+            res.send("Erro inesperado")
+        }
     }
-});
+})
 
 //Pesquisa prod p/ nome
-app.get("/products/search",(req:Request,res:Response)=>{
-    let productsFilter;
+app.get("/products/search", async(req:Request, res:Response)=>{
     try {
     const q = req.query.q as string;
-        if (q.length < 1){
+        if (q.length <= 1){
             res.status(400)
             throw new Error("Query params deve possuir pelo menos um caractere.")
         }
-    productsFilter = products.filter((product) => { 
-        return product.name.toLowerCase().includes(q.toLowerCase());
-    });
-    res.status(200).send(productsFilter)
-    } catch (error: any){
-        console.log(error);
-        
-        if(res.statusCode === 200){
-            res.status(500)
-        }
-    res.send(error.message);
+        const product = await db.raw(`
+        SELECT * FROM products
+        WHERE LOWER(name) LIKE("%${q}%");      
+ `)
+    res.status(200).send({product: product});
+}catch (error){
+    console.log(error);
+
+    if(res.statusCode === 200){
+        res.status(500)
     }
-});
+    if (error instanceof Error) {
+        res.send(error.message)
+    } else {
+        res.send("Erro inesperado")
+    }
+}
+})
 
 //Cadastro de novo usuário
-app.post("/users",(req:Request,res:Response)=>{
+app.post("/users", async (req:Request,res:Response)=>{
     try{
-        const id = req.body.id as string
-        const email = req.body.email as string
-        const password = req.body.password as string
+        const {id, name, email, password, createdAt} = req.body
     
         if (id !== undefined) {
+        if (name !== undefined) {
         if (email != undefined){
         if (password != undefined){
+        
             // validamos que é uma string
           if (typeof id !== "string") {
-                throw new Error("O 'Id' deve ser uma string")
+            res.status(400)
+            throw new Error("'Id' inválida, deve ser uma string");
+            }
+          if (typeof name !== "string") {
+            res.status(400)
+            throw new Error("'Name' inválida, deve ser uma string");
             }
           if (typeof email != "string") {
-            throw new Error("O 'Email' deve ser uma string")
+            res.status(400)
+            throw new Error("'Email' inválido, deve ser uma string");
             }
           if (typeof password != "string") {
-                throw new Error("A 'Senha' deve ser uma string")
+            res.status(400)
+            throw new Error("'Password' inválida, deve ser uma string");
             }
-          }}
+        }}}
             // verificamos no array clients se já existe esse cpf cadastrado
             const idExists = users.find((user) => user.id === id)
             const emailExists = users.find((user) => user.email === email)
             const passwordExists = users.find((user) => user.password === password)
     
             if (idExists) {
+                res.status(400)
                 throw new Error("'Id' já cadastrado, tente novamente.") // se já existir quebramos o fluxo com erro
             }
             if (emailExists) {
+                res.status(400)
                 throw new Error("'Email' já cadastrado, tente novamente.") // se já existir quebramos o fluxo com erro
             }
             if (passwordExists) {
+                res.status(400)
                 throw new Error("'Senha' já cadastrado, tente novamente.") // se já existir quebramos o fluxo com erro
             }
         }
-        const newUser:TUser = {
-                    id,
-                    email,
-                    password
-                }
-            
-                users.push(newUser)
-            
-                res.status(201).send(newUser)
-                console.log("Usuário cadastrado com sucesso!")
+        await db.raw(`
+            INSERT INTO users (id, name, email, password) 
+            VALUES ("${id}","${email}","${password}", "${createdAt}");
+            `)
+
+            res.status(201).send(`Cadastro de usuário com 'Id': ${id} realizado com sucesso`)
         // continuação do código...
-    } catch(error: any) {
-        console.log(error) // print do erro no terminal para facilitar o debug
-        res.status(400).send(error.message)
-    }})
+    } catch (error) {
+        console.log(error)
+
+        if (res.statusCode === 200) {
+            res.status(500)
+        }
+
+        if (error instanceof Error) {
+            res.send(error.message)
+        } else {
+            res.send("Erro inesperado")
+        }
+    }
+})
 
 //Cadastro de novo produto
-app.post("/products",(req:Request,res:Response)=>{
+app.post("/products", async (req:Request,res:Response)=>{
     try{
-        const id = req.body.id as string
-        const name = req.body.name as string
-        const price = req.body.price as number
-        const category = req.body.category as Category
+        const {id, name, price, description, imageUrl} = req.body
     
         if (id !== undefined) {
         if (name != undefined){
         if (price != undefined){
-        if(category != undefined){
+        if(description != undefined){
+        if(imageUrl != undefined){
             // validamos que é uma string
           if (typeof id !== "string") {
-                throw new Error("O 'Id' deve ser uma string")
+            res.status(400)
+                throw new Error("'Id' deve ser uma string")
             }
           if (typeof name != "string") {
-            throw new Error("O 'Email' deve ser uma string")
+            res.status(400)
+            throw new Error("'Name' deve ser uma string")
             }
           if (typeof price != "number") {
-                throw new Error("A 'Senha' deve ser um número")
+            res.status(400)
+                throw new Error("'Price' deve ser um número")
             }
-          if (typeof category != "string") {
-                throw new Error("A 'Categoria' deve ser uma string")
+          if (typeof description != "string") {
+            res.status(400)
+                throw new Error("'Category' deve ser uma string")
             }
-          }}}
+          if (typeof imageUrl != "string") {
+            res.status(400)
+                throw new Error("'Category' deve ser uma string")
+            }
+          }}}}
             // verificamos no array clients se já existe esse cpf cadastrado
-            const idExists = products.find((product) => product.id === id)
+            const productidExists = products.find((product) => product.id === id)
+            const nameExists = products.find((product) => product.name === name)
+            const priceExists = products.find((product) => product.price === price)
             
-            if (idExists) {
+            if (productidExists) {
+                res.status(400)
                 throw new Error("'Id' já cadastrado, tente novamente.") // se já existir quebramos o fluxo com erro
             }
-        }
-            const newProduct:TProduct = {
-                id,
-                name,
-                price,
-                category,
+            if (nameExists) {
+                res.status(400)
+                throw new Error("'Id' já cadastrado, tente novamente.") // se já existir quebramos o fluxo com erro
             }
-            products.push(newProduct)
-        
-            res.status(201).send(newProduct)
-            console.log("Produto cadastrado com sucesso!")
-        
-        // continuação do código...
-    } catch(error: any) {
-        console.log(error) // print do erro no terminal para facilitar o debug
-        res.status(400).send(error.message)
-    }})
+            if (priceExists) {
+                res.status(400)
+                throw new Error("'Email' já cadastrado, tente novamente.") // se já existir quebramos o fluxo com erro
+            }
+        }
+        await db.raw(`
+        INSERT INTO products (id, name, price, description, imageUrl) 
+        VALUES ("${id}","${name}","${price}","${description}", "${imageUrl}");
+        `)
+
+        res.status(201).send(`Cadastro de produto com 'Id': ${id} realizado com sucesso`)
+    // continuação do código...
+} catch (error) {
+    console.log(error)
+
+    if (res.statusCode === 200) {
+        res.status(500)
+    }
+
+    if (error instanceof Error) {
+        res.send(error.message)
+    } else {
+        res.send("Erro inesperado")
+    }
+}
+})
 
 //Cadastro de nova Compra
-app.post("/purchase",(req:Request,res:Response)=>{
+app.post("/purchases", async(req:Request,res:Response)=>{
+try{
+    const {id, buyer_id, total_price, createdAt, paid} = req.body
 
-    const userId = req.body.userId
-    const productId = req.body.productId
-    const quantity = req.body.quantity
-    const totalPrice = req.body.totalPrice
+    
+    if (id !== undefined) {
+        if (buyer_id != undefined){
+        if (total_price != undefined){
+            // validamos que é uma string
+          if (typeof id !== "string") {
+            res.status(400)
+                throw new Error("'Id' deve ser uma string")
+            }
+          if (typeof buyer_id != "string") {
+            res.status(400)
+            throw new Error("'buyer_id' deve ser uma string")
+            }
+          if (typeof total_price != "number") {
+            res.status(400)
+                throw new Error("'total_price' deve ser um número")
+            }
+        }}}
+          
+        await db.raw(`
+        INSERT INTO purchases (id, buyer_id, total_price, createdAt, paid) 
+        VALUES ("${id}","${buyer_id}","${total_price}","${createdAt}", "${paid}");
+        `)
 
-    const findUser = purchase.find((purch)=> purch.userId === userId);
-    if(!findUser){
-        res.status(400)
-        throw new Error("ID não consta na base de dados.")
+        res.status(201).send(`Cadastro de compra com 'Id': ${id} realizada com sucesso`)
+    // continuação do código...
+} catch (error) {
+    console.log(error)
+
+    if (res.statusCode === 200) {
+        res.status(500)
     }
 
-    const findProduct = products.find((product)=> product.id === productId);
-    if(!findProduct){
-        res.status(400)
-        throw new Error("Produto não consta na base de dados.")
+    if (error instanceof Error) {
+        res.send(error.message)
+    } else {
+        res.send("Erro inesperado")
     }
-
-    //Comparar se o preço é igual ao total recebido pelo body (o preço total não tem soma, então considerará somente o que foi passado na database como certo.)
-    if(findProduct.price * quantity != totalPrice){
-        res.status(400)
-        throw new Error("Valor total incorreto.")
-    }
-    const newPurchase:TPurchase = {
-        userId,
-        productId,
-        quantity,
-        totalPrice
-    }
-
-    purchase.push(newPurchase)
-
-    res.status(201).send(newPurchase)
-    console.log("Compra realizada com sucesso!")
+}
 })
 
 //Products by ID
-app.get("/products/:id",(req:Request, res:Response)=>{
+app.get("/products/:id", async(req:Request, res:Response)=>{
     try{
     const id = req.params.id
-    const result = products.find((product)=> product.id === id);
+    const [result] = await db.raw(`
+        SELECT * FROM products
+        WHERE id = "${id}"
+    `)
 
     if(!result){
         res.status(404)
         throw new Error("ID de produto não encontrado!")
     }
-        res.status(200).send(result)
+            res.status(200).send({"Produto encontrado": result})
     }catch (error:any){
         console.log(error);
 
@@ -245,24 +320,30 @@ app.get("/products/:id",(req:Request, res:Response)=>{
 });
 
 //Purchase Users by ID
-app.get("/users/:id/purchase",(req:Request, res:Response)=>{
+app.get("/users/:id/purchases", async(req:Request, res:Response)=>{
 try{
     const id = req.params.id;
-    const result = purchase.find((purchases) => purchases.userId === id);
-
+    const [result] = await db.raw(`
+        SELECT * FROM purchases
+        WHERE buyer_id = "${id}"
+    `)
     if(!result){
         res.status(404)
         throw new Error("O ID de usuário não existe ou não possui compras!")
     }
-        res.status(200).send(result)
-    }catch (error:any){
-        console.log(error);
+        res.status(200).send({"Compras do usuário": result})
+    } catch (error) {
+        console.log(error)
 
-        if(res.statusCode === 200){
+        if (res.statusCode === 200) {
             res.status(500)
         }
-        res.send(error.message)
-    console.log("Array de compras do usuário:")
+
+        if (error instanceof Error) {
+            res.send(error.message)
+        } else {
+            res.send("Erro inesperado")
+        }
     }
 })
 
